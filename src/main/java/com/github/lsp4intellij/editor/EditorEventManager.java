@@ -508,10 +508,10 @@ public class EditorEventManager {
                 this.diagnostics.clear();
                 this.diagnostics.addAll(diagnostics);
             }
-            // PsiFile psiFile = computableReadAction(
-            // () -> PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument()));
-            // // Forcefully triggers local inspection tool.
-            // runInspection(psiFile);
+            PsiFile psiFile = computableReadAction(
+                    () -> PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument()));
+            // Forcefully triggers local inspection tool.
+            runInspection(psiFile);
         }
     }
 
