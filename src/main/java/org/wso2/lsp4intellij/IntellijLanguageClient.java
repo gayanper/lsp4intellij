@@ -29,17 +29,6 @@ import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -60,6 +49,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -164,7 +154,7 @@ public class IntellijLanguageClient implements ApplicationComponent {
                 if (serverDefinition == null) {
                     // Fallback to file name pattern matching, where the map key is a regex
                     Optional<String> keyForFile = extToServerDefinition.keySet().stream()
-                        .filter(key -> fileName.matches(key)).findFirst();
+                            .filter(key -> fileName.matches(key)).findFirst();
                     if (keyForFile.isPresent()) {
                         serverDefinition = extToServerDefinition.get(keyForFile.get());
                         // ext must be the key since we are in file name mode.
@@ -184,6 +174,17 @@ public class IntellijLanguageClient implements ApplicationComponent {
                         String[] exts = serverDefinition.ext.split(LanguageServerDefinition.SPLIT_CHAR);
                         for (String ex : exts) {
                             extToLanguageWrapper.put(new ImmutablePair<>(ex, rootUri), wrapper);
+                        }
+
+                        // Update project mapping for language servers
+                        final String projectUri = FileUtils.pathToUri(project.getBasePath());
+                        Set<LanguageServerWrapper> wrappers = projectToLanguageWrappers.get(projectUri);
+                        if (wrappers == null) {
+                            wrappers = new HashSet<>();
+                            projectToLanguageWrappers.put(projectUri, wrappers);
+                        }
+                        if (!wrappers.contains(wrapper)) {
+                            wrappers.add(wrapper);
                         }
                     } else {
                         LOG.info("Wrapper already existing for " + ext + " , " + rootUri);
@@ -334,5 +335,7 @@ public class IntellijLanguageClient implements ApplicationComponent {
         }
     }
 
-    // Todo - Implement workspace symbols support
+    public static Map<String, Set<LanguageServerWrapper>> getProjectToLanguageWrappers() {
+        return projectToLanguageWrappers;
+    }
 }
