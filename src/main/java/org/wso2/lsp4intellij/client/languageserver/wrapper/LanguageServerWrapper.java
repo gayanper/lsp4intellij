@@ -90,12 +90,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -111,6 +106,7 @@ import static org.wso2.lsp4intellij.client.languageserver.ServerStatus.STOPPED;
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
 import static org.wso2.lsp4intellij.requests.Timeouts.INIT;
 import static org.wso2.lsp4intellij.requests.Timeouts.SHUTDOWN;
+import static org.wso2.lsp4intellij.utils.ApplicationUtils.computableReadAction;
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.invokeLater;
 import static org.wso2.lsp4intellij.utils.FileUtils.editorToProjectFolderUri;
 import static org.wso2.lsp4intellij.utils.FileUtils.editorToURIString;
@@ -296,6 +292,11 @@ public class LanguageServerWrapper {
             return;
         }
 
+        if(!isFileContentSupported(editor)) {
+            LOG.debug("Editor hosts a file which has a content which is not supported by " + serverDefinition);
+            return;
+        }
+
         String uri = editorToURIString(editor);
         uriToLanguageServerWrapper.put(new MutablePair<>(uri, editorToProjectFolderUri(editor)), this);
         if (connectedEditors.containsKey(uri)) {
@@ -366,7 +367,7 @@ public class LanguageServerWrapper {
                         }
                         // trigger annotators since the this is the first editor which starts the LS
                         // and annotators are executed before LS is boostrap to provide diagnostics
-                        ApplicationUtils.computableReadAction(() -> {
+                        computableReadAction(() -> {
                             DaemonCodeAnalyzer.getInstance(project).restart(
                                     PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument()));
                             return null;
@@ -382,6 +383,17 @@ public class LanguageServerWrapper {
                 toConnect.add(editor);
             }
         }
+    }
+
+    private boolean isFileContentSupported(Editor editor) {
+        return computableReadAction(() ->
+                Optional.ofNullable(PsiDocumentManager.getInstance(editor.getProject()).getPsiFile(editor.getDocument()))
+                        .map(f ->
+                                Optional.ofNullable(extManager).map(e -> e.isFileContentSupported(f)).orElse(false)
+                        ).orElseGet(() -> {
+                    LOG.debug("PsiFile for editor is null, isFileContentSupported will return false");
+                    return false;
+                }));
     }
 
     /*
