@@ -63,6 +63,6 @@ public class GUIUtils {
      * @return The LSPIconProvider, or LSPDefaultIconProvider if none are found
      */
     public static LSPIconProvider getIconProviderFor(LanguageServerDefinition serverDefinition) {
-        return new LSPDefaultIconProvider();
+        return serverDefinition.getIconProvider();
     }
 }

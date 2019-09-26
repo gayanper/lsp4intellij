@@ -18,7 +18,10 @@ package org.wso2.lsp4intellij.client.languageserver.serverdefinition;
 import com.intellij.openapi.diagnostic.Logger;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.client.connection.StreamConnectionProvider;
+import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
+import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -127,5 +130,15 @@ public class LanguageServerDefinition {
      */
     public String languageIdFor(String extension) {
         return languageIds.getOrDefault(extension, extension);
+    }
+
+    /**
+     * The icon provider for the Language Server. Override and implement your own or extend the
+     * {@link LSPDefaultIconProvider} to customize the default icons.
+     *
+     */
+    @NotNull
+    public LSPIconProvider getIconProvider() {
+        return new LSPDefaultIconProvider();
     }
 }
