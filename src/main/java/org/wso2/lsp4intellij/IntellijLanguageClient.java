@@ -378,6 +378,6 @@ public class IntellijLanguageClient implements ApplicationComponent {
      * @param definition The LanguageServerDefinition
      */
     public static Optional<LSPExtensionManager> getExtensionManagerForDefinition(@NotNull LanguageServerDefinition definition) {
-        return Optional.ofNullable(extToExtManager.get(definition.ext));
+        return Optional.ofNullable(extToExtManager.get(definition.ext.split(",")[0]));
     }
 }
