@@ -31,4 +31,12 @@ public interface LSPLabelProvider {
     default String symbolLabelFor(@NotNull SymbolInformation symbolInformation) {
         return symbolInformation.getName();
     }
+
+    /**
+     * Generate the symbol container name for the given {@link SymbolInformation}.
+     */
+    @NotNull
+    default String symbolContainerName(@NotNull SymbolInformation symbolInformation) {
+        return symbolInformation.getContainerName();
+    }
 }
