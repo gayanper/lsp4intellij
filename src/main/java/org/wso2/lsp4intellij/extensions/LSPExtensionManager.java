@@ -18,14 +18,18 @@ package org.wso2.lsp4intellij.extensions;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.editor.event.EditorMouseListener;
+import com.intellij.psi.PsiFile;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageServer;
+import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.client.ClientContext;
 import org.wso2.lsp4intellij.client.languageserver.ServerOptions;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.DefaultRequestManager;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
+import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
+import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
 import org.wso2.lsp4intellij.editor.EditorEventManager;
 import org.wso2.lsp4intellij.listeners.EditorMouseMotionListenerImpl;
 
@@ -49,4 +53,28 @@ public interface LSPExtensionManager {
      * @param context The client context which can be used by the LanguageClient implementation.
      */
     LanguageClient getExtendedClientFor(ClientContext context);
+
+    /**
+     * Some language servers might only need to start for files which has a specific content. This method can be used
+     * in such situation to control whether the file must be connected to a language server which is registered for the
+     * extension of this file.
+     *
+     * <b>Note:</b> By default this method returns <code>true</code>
+     *
+     * @param file PsiFile which is about to connect to a language server.
+     * @return <code>true</code> if the file is supported.
+     */
+    default boolean isFileContentSupported(@NotNull PsiFile file) {
+        return true;
+    }
+
+    /**
+     * The icon provider for the Language Server. Override and implement your own or extend the
+     * {@link LSPDefaultIconProvider} to customize the default icons.
+     *
+     */
+    @NotNull
+    default LSPIconProvider getIconProvider() {
+        return new LSPDefaultIconProvider();
+    }
 }
