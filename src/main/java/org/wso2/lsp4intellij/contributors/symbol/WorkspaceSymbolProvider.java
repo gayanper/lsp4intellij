@@ -36,6 +36,7 @@ import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
 import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
+import org.wso2.lsp4intellij.extensions.LSPLabelProvider;
 import org.wso2.lsp4intellij.requests.Timeouts;
 import org.wso2.lsp4intellij.utils.FileUtils;
 import org.wso2.lsp4intellij.utils.GUIUtils;
@@ -62,9 +63,10 @@ public class WorkspaceSymbolProvider {
 
   private LSPNavigationItem createNavigationItem(LSPSymbolResult result, Project project) {
     final LSPIconProvider iconProviderFor = GUIUtils.getIconProviderFor(result.getDefinition());
+    final LSPLabelProvider labelProvider = GUIUtils.getLabelProviderFor(result.getDefinition());
     final SymbolInformation information = result.getSymbolInformation();
     final Location location = information.getLocation();
-    return new LSPNavigationItem(information.getName(),
+    return new LSPNavigationItem(labelProvider.symbolLabelFor(information),
         information.getContainerName(), iconProviderFor.getSymbolIcon(information.getKind()),
         project, FileUtils.URIToVFS(location.getUri()),
         location.getRange().getStart().getLine(),

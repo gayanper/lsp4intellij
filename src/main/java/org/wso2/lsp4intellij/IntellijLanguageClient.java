@@ -371,4 +371,12 @@ public class IntellijLanguageClient implements ApplicationComponent {
     public void disposeComponent() {
         // Todo
     }
+
+    /**
+     * Returns the registered extension manager for this language server.
+     * @param definition The LanguageServerDefinition
+     */
+    public static Optional<LSPExtensionManager> getExtensionManagerForDefinition(@NotNull LanguageServerDefinition definition) {
+        return Optional.ofNullable(extToExtManager.get(definition.ext));
+    }
 }
