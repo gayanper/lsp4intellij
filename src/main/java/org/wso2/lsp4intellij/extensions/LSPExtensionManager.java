@@ -77,4 +77,14 @@ public interface LSPExtensionManager {
     default LSPIconProvider getIconProvider() {
         return new LSPDefaultIconProvider();
     }
+
+    /**
+     * The label provider for the Language Server. Implement and override default behavior
+     * if it needs to be customize.
+     */
+    @NotNull
+    default LSPLabelProvider getLabelProvider() {
+        return new LSPLabelProvider(){};
+    }
+
 }
