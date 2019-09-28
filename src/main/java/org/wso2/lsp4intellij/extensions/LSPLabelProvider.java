@@ -17,6 +17,7 @@ package org.wso2.lsp4intellij.extensions;
 
 import org.eclipse.lsp4j.SymbolInformation;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Extension to override the default Labels for Language Server elements such as symbols and completions.
@@ -25,18 +26,18 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface LSPLabelProvider {
     /**
-     * Generate the symbol label for the given {@link SymbolInformation}.
+     * Generate the symbol name for the given {@link SymbolInformation}.
      */
     @NotNull
-    default String symbolLabelFor(@NotNull SymbolInformation symbolInformation) {
+    default String symbolNameFor(@NotNull SymbolInformation symbolInformation) {
         return symbolInformation.getName();
     }
 
     /**
-     * Generate the symbol container name for the given {@link SymbolInformation}.
+     * Generate the symbol location for the given {@link SymbolInformation}.
      */
-    @NotNull
-    default String symbolContainerName(@NotNull SymbolInformation symbolInformation) {
+    @Nullable
+    default String symbolLocationFor(@NotNull SymbolInformation symbolInformation) {
         return symbolInformation.getContainerName();
     }
 }
