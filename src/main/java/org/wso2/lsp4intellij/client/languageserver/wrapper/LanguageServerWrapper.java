@@ -693,5 +693,15 @@ public class LanguageServerWrapper {
             IntellijLanguageClient.restart(project);
         }
     }
+
+    /**
+     * Returns the extension manager associated with this language server wrapper.
+     *
+     * @return The result can be null if there is not extension manager defined.
+     */
+    @Nullable
+    public final LSPExtensionManager getExtensionManager() {
+        return extManager;
+    }
 }
 

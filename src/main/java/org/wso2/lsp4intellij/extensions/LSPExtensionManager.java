@@ -28,6 +28,8 @@ import org.wso2.lsp4intellij.client.languageserver.ServerOptions;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.DefaultRequestManager;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
+import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
+import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
 import org.wso2.lsp4intellij.editor.EditorEventManager;
 import org.wso2.lsp4intellij.listeners.EditorMouseMotionListenerImpl;
 
@@ -64,5 +66,15 @@ public interface LSPExtensionManager {
      */
     default boolean isFileContentSupported(@NotNull PsiFile file) {
         return true;
+    }
+
+    /**
+     * The icon provider for the Language Server. Override and implement your own or extend the
+     * {@link LSPDefaultIconProvider} to customize the default icons.
+     *
+     */
+    @NotNull
+    default LSPIconProvider getIconProvider() {
+        return new LSPDefaultIconProvider();
     }
 }

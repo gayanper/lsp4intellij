@@ -131,14 +131,4 @@ public class LanguageServerDefinition {
     public String languageIdFor(String extension) {
         return languageIds.getOrDefault(extension, extension);
     }
-
-    /**
-     * The icon provider for the Language Server. Override and implement your own or extend the
-     * {@link LSPDefaultIconProvider} to customize the default icons.
-     *
-     */
-    @NotNull
-    public LSPIconProvider getIconProvider() {
-        return new LSPDefaultIconProvider();
-    }
 }
