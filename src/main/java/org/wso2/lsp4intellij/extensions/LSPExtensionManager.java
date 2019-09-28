@@ -21,6 +21,7 @@ import com.intellij.openapi.editor.event.EditorMouseListener;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageServer;
+import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.client.ClientContext;
 import org.wso2.lsp4intellij.client.languageserver.ServerOptions;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.DefaultRequestManager;
@@ -49,4 +50,14 @@ public interface LSPExtensionManager {
      * @param context The client context which can be used by the LanguageClient implementation.
      */
     LanguageClient getExtendedClientFor(ClientContext context);
+
+    /**
+     * The label provider for the Language Server. Implement and override default behavior
+     * if it needs to be customize.
+     */
+    @NotNull
+    default LSPLabelProvider getLabelProvider() {
+        return new LSPLabelProvider(){};
+    }
+
 }

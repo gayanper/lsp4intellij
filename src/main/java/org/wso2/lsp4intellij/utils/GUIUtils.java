@@ -20,14 +20,19 @@ import com.intellij.codeInsight.hint.HintManagerImpl;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.ui.Hint;
 import com.intellij.ui.LightweightHint;
+import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
 import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
 import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
+import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
+import org.wso2.lsp4intellij.extensions.LSPLabelProvider;
 
 import java.awt.*;
 import javax.swing.*;
 
 public class GUIUtils {
+
+    private static final LSPLabelProvider DEFAULT_LABEL_PROVIDER = new LSPLabelProvider(){};
 
     public static Hint createAndShowEditorHint(Editor editor, String string, Point point) {
         return createAndShowEditorHint(editor, string, point, HintManager.ABOVE,
@@ -64,5 +69,16 @@ public class GUIUtils {
      */
     public static LSPIconProvider getIconProviderFor(LanguageServerDefinition serverDefinition) {
         return new LSPDefaultIconProvider();
+    }
+
+    /**
+     * Returns a suitable LSPLabelProvider given a ServerDefinition
+     *
+     * @param serverDefinition The serverDefinition
+     * @return The LSPLabelProvider, or the default if none are found
+     */
+    public static LSPLabelProvider getLabelProviderFor(LanguageServerDefinition serverDefinition) {
+        return IntellijLanguageClient.getExtensionManagerForDefinition(serverDefinition)
+                .map(LSPExtensionManager::getLabelProvider).orElse(DEFAULT_LABEL_PROVIDER);
     }
 }
