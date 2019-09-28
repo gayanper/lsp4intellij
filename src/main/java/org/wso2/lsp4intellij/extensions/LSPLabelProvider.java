@@ -15,6 +15,7 @@
  */
 package org.wso2.lsp4intellij.extensions;
 
+import com.intellij.openapi.project.Project;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,7 +30,7 @@ public interface LSPLabelProvider {
      * Generate the symbol name for the given {@link SymbolInformation}.
      */
     @NotNull
-    default String symbolNameFor(@NotNull SymbolInformation symbolInformation) {
+    default String symbolNameFor(@NotNull SymbolInformation symbolInformation, @NotNull Project project) {
         return symbolInformation.getName();
     }
 
@@ -37,7 +38,7 @@ public interface LSPLabelProvider {
      * Generate the symbol location for the given {@link SymbolInformation}.
      */
     @Nullable
-    default String symbolLocationFor(@NotNull SymbolInformation symbolInformation) {
+    default String symbolLocationFor(@NotNull SymbolInformation symbolInformation, @NotNull Project project) {
         return symbolInformation.getContainerName();
     }
 }
