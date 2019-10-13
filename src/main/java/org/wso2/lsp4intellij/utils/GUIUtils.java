@@ -29,7 +29,6 @@ import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.Hint;
 import com.intellij.ui.LightweightHint;
-import com.intellij.util.ui.JBHtmlEditorKit;
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
 import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
 import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
@@ -37,6 +36,7 @@ import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
+import javax.swing.text.html.HTMLEditorKit;
 import java.awt.*;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -68,7 +68,7 @@ public class GUIUtils {
      */
     public static Hint createAndShowEditorHint(Editor editor, String string, Point point, short constraint, int flags) {
         JTextPane textPane = new JTextPane();
-        textPane.setEditorKit(new JBHtmlEditorKit());
+        textPane.setEditorKit(new HTMLEditorKit());
         textPane.setText(string);
         textPane.setEditable(false);
         textPane.addHyperlinkListener(new HyperlinkListener() {
