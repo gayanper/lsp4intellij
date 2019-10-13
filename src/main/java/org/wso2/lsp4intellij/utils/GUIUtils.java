@@ -15,25 +15,41 @@
  */
 package org.wso2.lsp4intellij.utils;
 
+import com.google.common.base.Strings;
 import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.codeInsight.hint.HintManagerImpl;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.fileEditor.OpenFileDescriptor;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VfsUtil;
+import com.intellij.openapi.vfs.VfsUtilCore;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.Hint;
 import com.intellij.ui.LightweightHint;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
+import com.intellij.util.ui.JBHtmlEditorKit;
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
 import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
 import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
 import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
 import org.wso2.lsp4intellij.extensions.LSPLabelProvider;
 
-import java.awt.*;
 import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
+import java.awt.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
 
 public class GUIUtils {
     private static final LSPDefaultIconProvider DEFAULT_ICON_PROVIDER = new LSPDefaultIconProvider();
 
     private static final LSPLabelProvider DEFAULT_LABEL_PROVIDER = new LSPLabelProvider(){};
+    private static final Logger LOGGER = Logger.getInstance(GUIUtils.class);
 
     public static Hint createAndShowEditorHint(Editor editor, String string, Point point) {
         return createAndShowEditorHint(editor, string, point, HintManager.ABOVE,
@@ -55,7 +71,29 @@ public class GUIUtils {
      * @return The hint
      */
     public static Hint createAndShowEditorHint(Editor editor, String string, Point point, short constraint, int flags) {
-        LightweightHint hint = new LightweightHint(new JLabel(string));
+        JTextPane textPane = new JTextPane();
+        textPane.setEditorKit(new JBHtmlEditorKit());
+        textPane.setText(string);
+        textPane.setEditable(false);
+        textPane.addHyperlinkListener(new HyperlinkListener() {
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if ((e.getEventType() == HyperlinkEvent.EventType.ACTIVATED)
+                        && !Strings.isNullOrEmpty(e.getDescription())) {
+                    try {
+                        final Project project = editor.getProject();
+                        VirtualFile file = VfsUtil.findFileByURL(new URL(VfsUtilCore.fixURLforIDEA(e.getURL().toString())));
+                        final OpenFileDescriptor descriptor = new OpenFileDescriptor(project, file);
+                        writeAction(() -> {
+                            FileEditorManager.getInstance(project).openTextEditor(descriptor, true);
+                        });
+                    } catch (MalformedURLException ex) {
+                        LOGGER.error(ex);
+                    }
+                }
+            }
+        });
+        LightweightHint hint = new LightweightHint(textPane);
         Point p = HintManagerImpl.getHintPosition(hint, editor, editor.xyToLogicalPosition(point), constraint);
         HintManagerImpl.getInstanceImpl().showEditorHint(hint, editor, p, flags, 0, false,
                 HintManagerImpl.createHintHint(editor, p, hint, constraint).setContentActive(false));

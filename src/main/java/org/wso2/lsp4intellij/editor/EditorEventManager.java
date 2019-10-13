@@ -15,6 +15,10 @@
  */
 package org.wso2.lsp4intellij.editor;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.intellij.codeInsight.completion.InsertionContext;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.intellij.codeInsight.hint.HintManager;
@@ -82,10 +86,7 @@ import java.awt.Cursor;
 import java.awt.Point;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -157,6 +158,8 @@ public class EditorEventManager {
     private volatile boolean diagnosticSyncRequired = true;
     private volatile boolean codeActionSyncRequired = false;
 
+    private LoadingCache<Language, Boolean> plainTextLanguageCache;
+
     //Todo - Revisit arguments order and add remaining listeners
     public EditorEventManager(Editor editor, DocumentListener documentListener, EditorMouseListener mouseListener,
                               EditorMouseMotionListener mouseMotionListener, RequestManager requestManager,
@@ -191,6 +194,14 @@ public class EditorEventManager {
         changesParams.getTextDocument().setUri(identifier.getUri());
 
         this.currentHint = null;
+        plainTextLanguageCache = CacheBuilder.newBuilder()
+                .maximumSize(100)
+                .build(new CacheLoader<Language, Boolean>() {
+                    @Override
+                    public Boolean load(Language language) throws Exception {
+                        return Arrays.stream(language.getMimeTypes()).anyMatch(s -> s.matches("text/.*"));
+                    }
+                });
     }
 
     @SuppressWarnings("unused")
@@ -255,9 +266,8 @@ public class EditorEventManager {
             return;
         }
         Language language = psiFile.getLanguage();
-        if ((!LanguageDocumentation.INSTANCE.allForLanguage(language).isEmpty() && !language
-                .equals(PlainTextLanguage.INSTANCE)) || (!getIsCtrlDown() && !EditorSettingsExternalizable
-                .getInstance().isShowQuickDocOnMouseOverElement())) {
+        if ((!LanguageDocumentation.INSTANCE.allForLanguage(language).isEmpty() && !isPlainTextLanguage(language))
+                || (!getIsCtrlDown() && !EditorSettingsExternalizable.getInstance().isShowQuickDocOnMouseOverElement())) {
             return;
         }
 
@@ -294,6 +304,15 @@ public class EditorEventManager {
                 ctrlTime = curTime;
             }
             predTime = curTime;
+        }
+    }
+
+    private boolean isPlainTextLanguage(Language language) {
+        try {
+            return language.isKindOf(PlainTextLanguage.INSTANCE) || plainTextLanguageCache.get(language);
+        } catch (ExecutionException e) {
+            LOG.error(e);
+            return false;
         }
     }
 
