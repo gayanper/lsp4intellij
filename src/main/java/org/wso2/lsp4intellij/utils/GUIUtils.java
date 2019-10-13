@@ -18,6 +18,7 @@ package org.wso2.lsp4intellij.utils;
 import com.google.common.base.Strings;
 import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.codeInsight.hint.HintManagerImpl;
+import com.intellij.ide.browsers.BrowserLauncher;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
@@ -38,6 +39,7 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import java.awt.*;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
@@ -75,14 +77,18 @@ public class GUIUtils {
                 if ((e.getEventType() == HyperlinkEvent.EventType.ACTIVATED)
                         && !Strings.isNullOrEmpty(e.getDescription())) {
                     try {
-                        final Project project = editor.getProject();
-                        VirtualFile file = VfsUtil.findFileByURL(new URL(VfsUtilCore.fixURLforIDEA(e.getURL().toString())));
-                        final OpenFileDescriptor descriptor = new OpenFileDescriptor(project, file);
-                        writeAction(() -> {
-                            FileEditorManager.getInstance(project).openTextEditor(descriptor, true);
-                        });
-                    } catch (MalformedURLException ex) {
-                        LOGGER.error(ex);
+                        if ("http".equals(e.getURL().getProtocol())) {
+                            BrowserLauncher.getInstance().browse(e.getURL().toURI());
+                        } else {
+                            final Project project = editor.getProject();
+                            VirtualFile file = VfsUtil.findFileByURL(new URL(VfsUtilCore.fixURLforIDEA(e.getURL().toString())));
+                            final OpenFileDescriptor descriptor = new OpenFileDescriptor(project, file);
+                            writeAction(() -> {
+                                FileEditorManager.getInstance(project).openTextEditor(descriptor, true);
+                            });
+                        }
+                    } catch (MalformedURLException | URISyntaxException ex) {
+                        LOGGER.error("Error opening doc link", ex);
                     }
                 }
             }
