@@ -31,6 +31,7 @@ import java.awt.*;
 import javax.swing.*;
 
 public class GUIUtils {
+    private static final LSPDefaultIconProvider DEFAULT_ICON_PROVIDER = new LSPDefaultIconProvider();
 
     private static final LSPLabelProvider DEFAULT_LABEL_PROVIDER = new LSPLabelProvider(){};
 
@@ -68,7 +69,8 @@ public class GUIUtils {
      * @return The LSPIconProvider, or LSPDefaultIconProvider if none are found
      */
     public static LSPIconProvider getIconProviderFor(LanguageServerDefinition serverDefinition) {
-        return new LSPDefaultIconProvider();
+        return IntellijLanguageClient.getExtensionManagerForDefinition(serverDefinition)
+                .map(LSPExtensionManager::getIconProvider).orElse(DEFAULT_ICON_PROVIDER);
     }
 
     /**
