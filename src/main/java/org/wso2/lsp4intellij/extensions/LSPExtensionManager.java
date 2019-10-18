@@ -86,5 +86,4 @@ public interface LSPExtensionManager {
     default LSPLabelProvider getLabelProvider() {
         return new LSPLabelProvider(){};
     }
-
 }
