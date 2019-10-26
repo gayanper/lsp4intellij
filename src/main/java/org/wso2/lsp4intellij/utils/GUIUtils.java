@@ -33,8 +33,9 @@ import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
 import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
 import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
+import org.wso2.lsp4intellij.contributors.label.LSPDefaultLabelProvider;
 import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
-import org.wso2.lsp4intellij.extensions.LSPLabelProvider;
+import org.wso2.lsp4intellij.contributors.label.LSPLabelProvider;
 
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
@@ -50,7 +51,8 @@ import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
 public class GUIUtils {
     private static final LSPDefaultIconProvider DEFAULT_ICON_PROVIDER = new LSPDefaultIconProvider();
 
-    private static final LSPLabelProvider DEFAULT_LABEL_PROVIDER = new LSPLabelProvider(){};
+    private static final LSPLabelProvider DEFAULT_LABEL_PROVIDER = new LSPDefaultLabelProvider();
+
     private static final Logger LOGGER = Logger.getInstance(GUIUtils.class);
 
     public static Hint createAndShowEditorHint(Editor editor, String string, Point point) {
