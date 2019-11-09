@@ -15,7 +15,6 @@
  */
 package org.wso2.lsp4intellij.utils;
 
-import com.google.common.base.Strings;
 import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.codeInsight.hint.HintManagerImpl;
 import com.intellij.ide.browsers.BrowserLauncher;
@@ -24,11 +23,14 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.Hint;
 import com.intellij.ui.LightweightHint;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
 import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
@@ -39,21 +41,25 @@ import org.wso2.lsp4intellij.contributors.label.LSPLabelProvider;
 
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkListener;
 import javax.swing.text.html.HTMLEditorKit;
 import java.awt.*;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Objects;
+import java.util.Optional;
 
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
 
-public class GUIUtils {
+public final class GUIUtils {
     private static final LSPDefaultIconProvider DEFAULT_ICON_PROVIDER = new LSPDefaultIconProvider();
 
     private static final LSPLabelProvider DEFAULT_LABEL_PROVIDER = new LSPDefaultLabelProvider();
 
     private static final Logger LOGGER = Logger.getInstance(GUIUtils.class);
+
+    private GUIUtils() {
+    }
 
     public static Hint createAndShowEditorHint(Editor editor, String string, Point point) {
         return createAndShowEditorHint(editor, string, point, HintManager.ABOVE,
@@ -79,25 +85,33 @@ public class GUIUtils {
         textPane.setEditorKit(new HTMLEditorKit());
         textPane.setText(string);
         textPane.setEditable(false);
-        textPane.addHyperlinkListener(new HyperlinkListener() {
-            @Override
-            public void hyperlinkUpdate(HyperlinkEvent e) {
-                if ((e.getEventType() == HyperlinkEvent.EventType.ACTIVATED)
-                        && !Strings.isNullOrEmpty(e.getDescription())) {
-                    try {
-                        if ("http".equals(e.getURL().getProtocol())) {
-                            BrowserLauncher.getInstance().browse(e.getURL().toURI());
-                        } else {
-                            final Project project = editor.getProject();
-                            VirtualFile file = VfsUtil.findFileByURL(new URL(VfsUtilCore.fixURLforIDEA(e.getURL().toString())));
-                            final OpenFileDescriptor descriptor = new OpenFileDescriptor(project, file);
-                            writeAction(() -> {
-                                FileEditorManager.getInstance(project).openTextEditor(descriptor, true);
-                            });
-                        }
-                    } catch (MalformedURLException | URISyntaxException ex) {
-                        LOGGER.error("Error opening doc link", ex);
+        textPane.addHyperlinkListener(e -> {
+            if ((e.getEventType() == HyperlinkEvent.EventType.ACTIVATED)
+                    && Objects.nonNull(e.getURL())) {
+                try {
+                    if ("http".equals(e.getURL().getProtocol())) {
+                        BrowserLauncher.getInstance().browse(e.getURL().toURI());
+                    } else {
+                        final Project project = editor.getProject();
+                        Optional<? extends Pair<Project, VirtualFile>> fileToOpen = Optional.ofNullable(project).map(p -> {
+                            try {
+                                return Optional.ofNullable(
+                                    VfsUtil.findFileByURL(new URL(VfsUtilCore.fixURLforIDEA(e.getURL().toString()))))
+                                    .map(f -> new ImmutablePair<>(p, f));
+                            } catch (MalformedURLException ex) {
+                                LOGGER.debug("Invalid URL was found.", ex);
+                                return Optional.<Pair<Project, VirtualFile>>empty();
+                            }
+                        }).orElse(Optional.empty());
+
+                        fileToOpen.ifPresent(f -> {
+                            final OpenFileDescriptor descriptor = new OpenFileDescriptor(f.getLeft(), f.getRight());
+                            writeAction(() -> FileEditorManager.getInstance(f.getLeft()).openTextEditor(descriptor, true));
+                        });
                     }
+                } catch (URISyntaxException ex) {
+                    Messages.showErrorDialog("Invalid syntax in URL", "Open URL Error");
+                    LOGGER.debug("Invalid URL was found.", ex);
                 }
             }
         });
@@ -129,4 +143,5 @@ public class GUIUtils {
         return IntellijLanguageClient.getExtensionManagerForDefinition(serverDefinition)
                 .map(LSPExtensionManager::getLabelProvider).orElse(DEFAULT_LABEL_PROVIDER);
     }
+
 }
