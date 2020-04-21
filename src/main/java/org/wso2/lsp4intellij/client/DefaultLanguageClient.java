@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,11 +131,11 @@ public class DefaultLanguageClient implements LanguageClient {
             if (msgType == MessageType.Error) {
                 Messages.showErrorDialog(message, title);
             } else if (msgType == MessageType.Warning) {
-                Messages.showErrorDialog(message, title);
+                Messages.showWarningDialog(message, title);
             } else if (msgType == MessageType.Info) {
-                Messages.showErrorDialog(message, title);
+                Messages.showInfoMessage(message, title);
             } else if (msgType == MessageType.Log) {
-                Messages.showErrorDialog(message, title);
+                Messages.showInfoMessage(message, title);
             } else {
                 LOG.warn("No message type for " + message);
             }

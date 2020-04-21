@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,6 +114,7 @@ import org.wso2.lsp4intellij.contributors.fixes.LSPCommandFix;
 import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
 import org.wso2.lsp4intellij.contributors.psi.LSPPsiElement;
 import org.wso2.lsp4intellij.contributors.rename.LSPRenameProcessor;
+import org.wso2.lsp4intellij.listeners.LSPCaretListenerImpl;
 import org.wso2.lsp4intellij.requests.HoverHandler;
 import org.wso2.lsp4intellij.requests.Timeouts;
 import org.wso2.lsp4intellij.requests.WorkspaceEditHandler;
@@ -183,6 +184,7 @@ public class EditorEventManager {
     private DocumentListener documentListener;
     private EditorMouseListener mouseListener;
     private EditorMouseMotionListener mouseMotionListener;
+    private LSPCaretListenerImpl caretListener;
 
     public List<String> completionTriggers;
     private List<String> signatureTriggers;
@@ -207,8 +209,8 @@ public class EditorEventManager {
 
     //Todo - Revisit arguments order and add remaining listeners
     public EditorEventManager(Editor editor, DocumentListener documentListener, EditorMouseListener mouseListener,
-                              EditorMouseMotionListener mouseMotionListener, RequestManager requestManager,
-                              ServerOptions serverOptions, LanguageServerWrapper wrapper) {
+                              EditorMouseMotionListener mouseMotionListener, LSPCaretListenerImpl caretListener,
+                              RequestManager requestManager, ServerOptions serverOptions, LanguageServerWrapper wrapper) {
 
         this.editor = editor;
         this.documentListener = documentListener;
@@ -216,6 +218,7 @@ public class EditorEventManager {
         this.mouseMotionListener = mouseMotionListener;
         this.requestManager = requestManager;
         this.wrapper = wrapper;
+        this.caretListener = caretListener;
 
         this.identifier = new TextDocumentIdentifier(FileUtils.editorToURIString(editor));
         this.changesParams = new DidChangeTextDocumentParams(new VersionedTextDocumentIdentifier(),
@@ -368,15 +371,7 @@ public class EditorEventManager {
             } catch (Exception err) {
                 LOG.warn("Error occurred when trying source navigation", err);
             }
-        } else {
-            // Request and shows available code actions(intention actions) for the given context.
-            try {
-                requestAndShowCodeActions();
-            } catch (Exception err) {
-                LOG.warn("Error occurred when trying to update code actions", err);
-            }
         }
-
     }
 
     private void createCtrlRange(Position logicalPos, Range range) {
@@ -993,8 +988,9 @@ public class EditorEventManager {
         variables.sort(Comparator.comparingInt(o -> o.startIndex));
         final String[] finalInsertText = {insertText};
         variables.forEach(var -> finalInsertText[0] = finalInsertText[0].replace(var.lspSnippetText, "$"));
-        String[] splittedInsertText = finalInsertText[0].split("\\$");
-        finalInsertText[0] = String.join("", splittedInsertText);
+
+        String[] splitInsertText = finalInsertText[0].split("\\$");
+        finalInsertText[0] = String.join("", splitInsertText);
 
         TemplateImpl template = (TemplateImpl) TemplateManager.getInstance(getProject()).createTemplate(finalInsertText[0],
                 "lsp4intellij");
@@ -1002,13 +998,16 @@ public class EditorEventManager {
 
         final int[] varIndex = {0};
         variables.forEach(var -> {
-            template.addTextSegment(splittedInsertText[varIndex[0]]);
+            template.addTextSegment(splitInsertText[varIndex[0]]);
             template.addVariable(varIndex[0] + "_" + var.variableValue, new TextExpression(var.variableValue),
                     new TextExpression(var.variableValue), true, false);
             varIndex[0]++;
         });
-        template.addTextSegment(splittedInsertText[splittedInsertText.length - 1]);
-
+        // If the snippet text ends with a placeholder, there will be no string segment left to append after the last
+        // variable.
+        if (splitInsertText.length != variables.size()) {
+            template.addTextSegment(splitInsertText[splitInsertText.length - 1]);
+        }
         template.setInline(true);
         EditorModificationUtil.moveCaretRelatively(editor, -template.getTemplateText().length());
         TemplateManager.getInstance(getProject()).startTemplate(editor, template);
@@ -1182,6 +1181,7 @@ public class EditorEventManager {
         editor.getDocument().addDocumentListener(documentListener);
         editor.addEditorMouseListener(mouseListener);
         editor.addEditorMouseMotionListener(mouseMotionListener);
+        editor.getCaretModel().addCaretListener(caretListener);
         // Todo - Implement
         // editor.getSelectionModel.addSelectionListener(selectionListener)
     }
@@ -1193,6 +1193,7 @@ public class EditorEventManager {
         editor.getDocument().removeDocumentListener(documentListener);
         editor.removeEditorMouseListener(mouseListener);
         editor.removeEditorMouseMotionListener(mouseMotionListener);
+        editor.getCaretModel().removeCaretListener(caretListener);
         // Todo - Implement
         // editor.getSelectionModel.removeSelectionListener(selectionListener)
     }
@@ -1412,7 +1413,7 @@ public class EditorEventManager {
         });
     }
 
-    private void requestAndShowCodeActions() {
+    public void requestAndShowCodeActions() {
         invokeLater(() -> {
             if (editor.isDisposed()) {
                 return;

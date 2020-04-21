@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,8 +80,8 @@ import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
 import org.wso2.lsp4intellij.listeners.DocumentListenerImpl;
 import org.wso2.lsp4intellij.listeners.EditorMouseListenerImpl;
 import org.wso2.lsp4intellij.listeners.EditorMouseMotionListenerImpl;
+import org.wso2.lsp4intellij.listeners.LSPCaretListenerImpl;
 import org.wso2.lsp4intellij.requests.Timeouts;
-import org.wso2.lsp4intellij.utils.ApplicationUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 import org.wso2.lsp4intellij.utils.LSPException;
 
@@ -90,7 +90,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -110,6 +115,7 @@ import static org.wso2.lsp4intellij.utils.ApplicationUtils.computableReadAction;
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.invokeLater;
 import static org.wso2.lsp4intellij.utils.FileUtils.editorToProjectFolderUri;
 import static org.wso2.lsp4intellij.utils.FileUtils.editorToURIString;
+import static org.wso2.lsp4intellij.utils.FileUtils.reloadEditors;
 import static org.wso2.lsp4intellij.utils.FileUtils.sanitizeURI;
 
 /**
@@ -322,24 +328,29 @@ public class LanguageServerWrapper {
                         DocumentListenerImpl documentListener = new DocumentListenerImpl();
                         EditorMouseListenerImpl mouseListener = new EditorMouseListenerImpl();
                         EditorMouseMotionListenerImpl mouseMotionListener = new EditorMouseMotionListenerImpl();
+                        LSPCaretListenerImpl caretListener = new LSPCaretListenerImpl();
 
                         ServerOptions serverOptions = new ServerOptions(capabilities);
                         EditorEventManager manager;
                         if (extManager != null) {
                             manager = extManager.getExtendedEditorEventManagerFor(editor, documentListener,
-                                    mouseListener, mouseMotionListener, requestManager, serverOptions, this);
+                                    mouseListener, mouseMotionListener, caretListener, requestManager, serverOptions,
+                                    this);
                             if (manager == null) {
                                 manager = new EditorEventManager(editor, documentListener, mouseListener,
-                                        mouseMotionListener, requestManager, serverOptions, this);
+                                        mouseMotionListener, caretListener,
+                                        requestManager, serverOptions, this);
                             }
                         } else {
                             manager = new EditorEventManager(editor, documentListener, mouseListener,
-                                    mouseMotionListener, requestManager, serverOptions, this);
+                                    mouseMotionListener, caretListener,
+                                    requestManager, serverOptions, this);
                         }
                         // selectionListener.setManager(manager);
                         documentListener.setManager(manager);
                         mouseListener.setManager(manager);
                         mouseMotionListener.setManager(manager);
+                        caretListener.setManager(manager);
                         manager.registerListeners();
                         connectedEditors.put(uri, manager);
                         manager.documentOpened();
@@ -690,7 +701,7 @@ public class LanguageServerWrapper {
         if (isRestartable()) {
             alreadyShownCrash = false;
             alreadyShownTimeout = false;
-            IntellijLanguageClient.restart(project);
+            reloadEditors(project);
         }
     }
 
