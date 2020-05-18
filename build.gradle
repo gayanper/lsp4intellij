@@ -20,11 +20,7 @@ def CI_JOB = Boolean.valueOf(System.getenv("CI_JOB"))
 intellij {
     type 'IC'
     updateSinceUntilBuild false
-    if(CI_JOB) {
-        version '2017.3'
-    } else {
-        localPath '/opt/ideaIC-2019'
-    }
+    version '2017.3'
 }
 
 dependencies {
