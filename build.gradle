@@ -79,7 +79,7 @@ bintray {
     override = true
     pkg {
         repo = 'maven'
-        name = 'lsp4intellij'
+        name = project.group
         licenses = ['Apache-2.0']
         userOrg = System.getenv("BINTRAY_USER")
         vcsUrl = 'https://github.com/gayanper/lsp4intellij'
