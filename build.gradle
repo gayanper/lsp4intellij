@@ -13,9 +13,7 @@ repositories {
     mavenCentral()
 }
 
-group = "org.wso2.lsp4intellij"
-version = new Date().format("yyyyMMdd.HH.mm.ss.SSS")
-def CI_JOB = Boolean.valueOf(System.getenv("CI_JOB"))
+group = "com.github.ballerina-platform"
 
 intellij {
     type 'IC'
