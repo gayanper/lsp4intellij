@@ -22,9 +22,9 @@ if(version.toString().endsWith("SNAPSHOT")) {
 }
 
 intellij {
+    version '2020.1'
     type 'IC'
     updateSinceUntilBuild false
-    version '2017.3'
 }
 
 dependencies {
