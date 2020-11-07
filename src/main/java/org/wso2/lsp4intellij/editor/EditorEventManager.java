@@ -55,7 +55,6 @@ import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VfsUtil;
-import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
@@ -205,7 +204,7 @@ public class EditorEventManager {
     private volatile boolean diagnosticSyncRequired = true;
     private volatile boolean codeActionSyncRequired = false;
 
-    public static final String SNIPPET_PLACEHOLDER_REGEX = "\\$\\{\\d+:?([^{^}]*)}";
+    public static final String SNIPPET_PLACEHOLDER_REGEX = "(\\$\\{\\d+:?([^{^}]*)}|\\$\\d+)";
 
     //Todo - Revisit arguments order and add remaining listeners
     public EditorEventManager(Editor editor, DocumentListener documentListener, EditorMouseListener mouseListener,
@@ -317,13 +316,12 @@ public class EditorEventManager {
             ctrlTime = curTime;
         } else {
             LogicalPosition lPos = getPos(e);
-
             if (lPos == null || getIsKeyPressed() && !getIsCtrlDown()) {
                 return;
             }
 
             int offset = editor.logicalPositionToOffset(lPos);
-            if (getIsCtrlDown() && curTime - ctrlTime > EditorEventManagerBase.CTRL_THRES) {
+            if (getIsCtrlDown() && curTime - ctrlTime > EditorEventManagerBase.CTRL_THRESH) {
                 if (getCtrlRange() == null || !getCtrlRange().highlightContainsOffset(offset)) {
                     if (currentHint != null) {
                         currentHint.hide();
@@ -335,11 +333,9 @@ public class EditorEventManager {
                     setCtrlRange(null);
                     pool(() -> requestAndShowDoc(lPos, e.getMouseEvent().getPoint()));
                 } else if (getCtrlRange().definitionContainsOffset(offset)) {
-                    createAndShowEditorHint(editor, "Click to show usages",
-                            editor.offsetToXY(offset));
+                    createAndShowEditorHint(editor, "Click to show usages", editor.offsetToXY(offset));
                 } else {
-                    editor.getContentComponent()
-                            .setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                    editor.getContentComponent().setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 }
                 ctrlTime = curTime;
             }
@@ -917,11 +913,8 @@ public class EditorEventManager {
         }
         // Fixes IDEA internal assertion failure in windows.
         lookupString = lookupString.replace(DocumentUtils.WIN_SEPARATOR, DocumentUtils.LINUX_SEPARATOR);
-        if (item.getInsertTextFormat() == InsertTextFormat.Snippet) {
-            lookupElementBuilder = LookupElementBuilder.create(convertPlaceHolders(lookupString));
-        } else {
-            lookupElementBuilder = LookupElementBuilder.create(lookupString);
-        }
+
+        lookupElementBuilder = LookupElementBuilder.create(getLookupStringWithoutPlaceholders(item, lookupString));
 
         lookupElementBuilder = addCompletionInsertHandlers(item, lookupElementBuilder, lookupString);
 
@@ -931,6 +924,14 @@ public class EditorEventManager {
 
         return lookupElementBuilder.withPresentableText(presentableText).withTypeText(tailText, true).withIcon(icon)
                 .withAutoCompletionPolicy(AutoCompletionPolicy.SETTINGS_DEPENDENT);
+    }
+
+    private String getLookupStringWithoutPlaceholders(CompletionItem item, String lookupString) {
+        if (item.getInsertTextFormat() == InsertTextFormat.Snippet) {
+            return convertPlaceHolders(lookupString);
+        } else {
+            return lookupString;
+        }
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -943,6 +944,8 @@ public class EditorEventManager {
 
         if (addTextEdits != null) {
             builder = builder.withInsertHandler((InsertionContext context, LookupElement lookupElement) -> invokeLater(() -> {
+                applyInitialTextEdit(item, lookupString);
+
                 if (format == InsertTextFormat.Snippet) {
                     context.commitDocument();
                     prepareAndRunSnippet(lookupString);
@@ -956,6 +959,8 @@ public class EditorEventManager {
             }));
         } else if (command != null) {
             builder = builder.withInsertHandler((InsertionContext context, LookupElement lookupElement) -> {
+                applyInitialTextEdit(item, lookupString);
+
                 if (format == InsertTextFormat.Snippet) {
                     context.commitDocument();
                     prepareAndRunSnippet(lookupString);
@@ -965,6 +970,8 @@ public class EditorEventManager {
             });
         } else {
             builder = builder.withInsertHandler((InsertionContext context, LookupElement lookupElement) -> {
+                applyInitialTextEdit(item, lookupString);
+
                 if (format == InsertTextFormat.Snippet) {
                     context.commitDocument();
                     prepareAndRunSnippet(lookupString);
@@ -973,6 +980,24 @@ public class EditorEventManager {
         }
 
         return builder;
+    }
+
+    private void applyInitialTextEdit(CompletionItem item, String lookupString) {
+        if(item.getTextEdit() != null){
+            String insertText = getLookupStringWithoutPlaceholders(item, lookupString);
+
+            // build up an alternative text edit, as intelliJ unfortunately already changed the document and inserted lookupString for us
+            int lookupStringLength = insertText.length();
+            int endLine = item.getTextEdit().getRange().getEnd().getLine();
+            int endCharacter = item.getTextEdit().getRange().getEnd().getCharacter();
+
+            // here we add the lookup string length to the range we want to override, as intellij already inserted it.
+            Position endPosition = new Position(endLine,endCharacter + lookupStringLength);
+
+            // finally, the actual range we want to replace
+            TextEdit myTextEdit = new TextEdit(new Range(item.getTextEdit().getRange().getStart(), endPosition), insertText);
+            applyEdit(Integer.MAX_VALUE, Collections.singletonList(myTextEdit) ,"Completion beforeSnippets: " + lookupString, false,true);
+        }
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -1009,7 +1034,9 @@ public class EditorEventManager {
             template.addTextSegment(splitInsertText[splitInsertText.length - 1]);
         }
         template.setInline(true);
-        EditorModificationUtil.moveCaretRelatively(editor, -template.getTemplateText().length());
+        if(variables.size() > 0){
+            EditorModificationUtil.moveCaretRelatively(editor, -template.getTemplateText().length());
+        }
         TemplateManager.getInstance(getProject()).startTemplate(editor, template);
     }
 
@@ -1118,6 +1145,9 @@ public class EditorEventManager {
                 int end = edit.getEndOffset();
                 if (StringUtils.isEmpty(text)) {
                     document.deleteString(start, end);
+                    if (setCaret) {
+                        editor.getCaretModel().moveToOffset(start);
+                    }
                 } else {
                     text = text.replace(DocumentUtils.WIN_SEPARATOR, DocumentUtils.LINUX_SEPARATOR);
                     if (end >= 0) {
@@ -1255,9 +1285,10 @@ public class EditorEventManager {
                 int endLine, endColumn;
                 if (oldText.length() > 0) {
                     endLine = startLine + StringUtil.countNewLines(oldText);
-                    String[] oldLines = oldText.toString().split("\n");
+                    String content = oldText.toString();
+                    String[] oldLines = content.split("\n");
                     int oldTextLength = oldLines.length == 0 ? 0 : oldLines[oldLines.length - 1].length();
-                    endColumn = oldLines.length == 1 ? startColumn + oldTextLength : oldTextLength;
+                    endColumn = content.endsWith("\n") ? 0 : oldLines.length == 1 ? startColumn + oldTextLength : oldTextLength;
                 } else { //if insert or no text change, the end position is the same
                     endLine = startLine;
                     endColumn = startColumn;
@@ -1384,7 +1415,7 @@ public class EditorEventManager {
             } else {
                 VirtualFile file = null;
                 try {
-                    file = VfsUtil.findFileByURL(new URL(VfsUtilCore.fixURLforIDEA(locUri)));
+                    file = VfsUtil.findFileByURL(new URL(locUri));
                 } catch (MalformedURLException e1) {
                     LOG.warn("Syntax Exception occurred for uri: " + locUri);
                 }
@@ -1459,7 +1490,7 @@ public class EditorEventManager {
 
                     // If the code actions does not have a diagnostics context, creates an intention action for
                     // the current line.
-                    if ((diagnosticContext == null || diagnosticContext.isEmpty()) && !codeActionSyncRequired) {
+                    if ((diagnosticContext == null || diagnosticContext.isEmpty()) && anonHolder != null && !codeActionSyncRequired) {
                         // Calculates text range of the current line.
                         int line = editor.getCaretModel().getCurrentCaret().getLogicalPosition().line;
                         int startOffset = editor.getDocument().getLineStartOffset(line);
@@ -1468,7 +1499,6 @@ public class EditorEventManager {
 
                         Annotation annotation = this.anonHolder.createInfoAnnotation(range, codeAction.getTitle());
                         annotation.registerFix(new LSPCodeActionFix(FileUtils.editorToURIString(editor), codeAction), range);
-
                         this.annotations.add(annotation);
                         diagnosticSyncRequired = true;
                     }
